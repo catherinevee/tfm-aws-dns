@@ -1,0 +1,44 @@
+# Example Terraform Variables for AWS DNS Module
+
+# General Configuration
+domain_name = "example.com"
+
+# Public Zone Configuration
+public_zone_enabled = true
+public_zone_comment = "Public zone for example.com managed by Terraform"
+
+# Example public DNS records
+public_records = {
+  www = {
+    name    = "www"
+    type    = "A"
+    ttl     = 300
+    records = ["192.0.2.1"]
+  }
+  mail = {
+    name    = ""
+    type    = "MX"
+    ttl     = 300
+    records = ["10 mail.example.com"]
+  }
+}
+
+# Private Zone Configuration (optional)
+private_zone_enabled = false
+# private_domain_name = "internal.example.com"
+# vpc_id = "vpc-12345678"
+# vpc_region = "us-east-1"
+
+# Resolver Configuration (optional)
+resolver_inbound_enabled = false
+resolver_outbound_enabled = false
+
+# Health Checks (optional)
+health_checks = {}
+
+# Tagging
+tags = {
+  Environment = "production"
+  Project     = "dns-infrastructure"
+  ManagedBy   = "terraform"
+}

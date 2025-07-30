@@ -1,0 +1,47 @@
+# Example Terraform Variables for Hybrid DNS with Route 53 Resolver
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Environment Configuration
+environment = "prod"
+
+# Domain Configuration
+public_domain_name  = "example.com"
+private_domain_name = "internal.example.com"
+on_premises_domain  = "corp.example.com"
+
+# Optional additional domain forwarding
+# additional_forward_domain = "legacy.example.com"
+
+# VPC Configuration
+vpc_id = "vpc-12345678"
+
+# Subnet names for resolver endpoints (must be in different AZs)
+resolver_subnet_names = ["private-subnet-1a", "private-subnet-1b"]
+
+# Network Configuration
+on_premises_cidr_blocks = ["192.168.0.0/16", "10.10.0.0/16"]
+
+# On-premises DNS servers
+on_premises_dns_servers = [
+  {
+    ip   = "192.168.1.10"
+    port = 53
+  },
+  {
+    ip   = "192.168.1.11"
+    port = 53
+  }
+]
+
+# Resolver Configuration
+enable_inbound_resolver  = true
+enable_outbound_resolver = true
+
+# Optional: Static IP addresses for resolver endpoints
+# inbound_resolver_ips  = ["10.0.1.10", "10.0.2.10"]
+# outbound_resolver_ips = ["10.0.1.11", "10.0.2.11"]
+
+# Public DNS Configuration
+public_website_ip = "203.0.113.1"

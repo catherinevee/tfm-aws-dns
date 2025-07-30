@@ -1,0 +1,16 @@
+# Example Terraform Variables for Private DNS with VPC
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Environment Configuration
+environment = "dev"
+
+# Domain Configuration
+private_domain_name = "internal.example.com"
+
+# VPC Configuration
+vpc_id = "vpc-12345678"
+
+# Optional: Additional VPC associations
+# additional_vpc_ids = ["vpc-87654321", "vpc-11223344"]

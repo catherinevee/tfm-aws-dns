@@ -1,0 +1,7 @@
+# Example Terraform Variables for Basic Public DNS
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Domain Configuration
+domain_name = "example.com"
