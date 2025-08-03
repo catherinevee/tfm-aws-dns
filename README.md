@@ -2,6 +2,65 @@
 
 A comprehensive Terraform module for managing AWS DNS solutions that meet public, private, and hybrid requirements using Amazon Route 53.
 
+## Resource Map
+
+This module creates the following AWS resources:
+
+### Core DNS Resources
+- **aws_route53_zone** - Route 53 hosted zones (public and private)
+- **aws_route53_record** - DNS records (A, AAAA, CNAME, MX, TXT, etc.)
+- **aws_route53_zone_association** - VPC associations for private hosted zones
+- **aws_route53_delegation_set** - DNS delegation sets for domain transfers
+
+### Advanced DNS Features
+- **aws_route53_resolver_endpoint** - Route 53 Resolver endpoints for hybrid DNS
+- **aws_route53_resolver_rule** - DNS resolution rules for custom domain routing
+- **aws_route53_resolver_rule_association** - Rule associations with VPCs
+- **aws_route53_query_log** - DNS query logging configurations
+
+### Security and Monitoring
+- **aws_route53_health_check** - Health checks for DNS failover
+- **aws_route53_traffic_policy** - Traffic routing policies
+- **aws_route53_traffic_policy_instance** - Traffic policy instances
+
+### IAM and Permissions
+- **aws_iam_role** - IAM roles for DNS operations
+- **aws_iam_role_policy** - Policies for DNS management permissions
+- **aws_iam_role_policy_attachment** - Policy attachments for DNS services
+
+### Supporting Resources
+- **aws_cloudwatch_log_group** - Log groups for DNS query logging
+- **aws_kms_key** - KMS keys for DNS query log encryption
+- **aws_kms_alias** - KMS key aliases for DNS encryption
+
+### Resource Dependencies
+```
+aws_route53_zone
+├── aws_route53_record
+├── aws_route53_zone_association
+└── aws_route53_delegation_set
+
+aws_route53_resolver_endpoint
+├── aws_route53_resolver_rule
+└── aws_route53_resolver_rule_association
+
+aws_route53_health_check
+└── aws_route53_record (failover)
+
+aws_cloudwatch_log_group
+└── aws_route53_query_log
+
+aws_kms_key
+├── aws_kms_alias
+└── aws_route53_query_log (encryption)
+```
+
+### Resource Counts by Example
+- **Basic Public Zone**: 2 resources (zone + default NS/SOA records)
+- **Complete Setup**: 8-12 resources (zone, records, health checks, logging)
+- **Hybrid Resolver**: 15-20 resources (resolver endpoints, rules, associations)
+- **Multi-VPC DNS**: 25-35 resources (multiple zones, associations, resolver configs)
+
 ## Features
 
 - **Public DNS**: Route 53 public hosted zones with advanced routing policies

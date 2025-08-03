@@ -1,0 +1,249 @@
+name: Terraform Module Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  TF_VERSION: "1.13.0"
+  AWS_PROVIDER_VERSION: "6.2.0"
+
+jobs:
+  validate:
+    name: Validate Terraform Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
+      
+    - name: Terraform Init
+      run: terraform init
+      
+    - name: Terraform Validate
+      run: terraform validate
+      
+    - name: Terraform Plan (Basic)
+      run: |
+        terraform plan \
+          -var="domain_name=test.example.com" \
+          -var="public_zone_enabled=true" \
+          -var="private_zone_enabled=false" \
+          -out=tfplan
+          
+    - name: Terraform Plan (Complete)
+      run: |
+        terraform plan \
+          -var-file=terraform.tfvars.example \
+          -out=tfplan-complete
+
+  test:
+    name: Run Terraform Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        
+    - name: Terraform Init
+      run: terraform init
+      
+    - name: Run Terraform Tests
+      run: terraform test
+      
+    - name: Run Terraform Tests with Coverage
+      run: terraform test -verbose
+
+  security:
+    name: Security and Compliance Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        
+    - name: Install TFLint
+      run: |
+        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        
+    - name: Run TFLint
+      run: tflint --init && tflint
+        
+    - name: Install Checkov
+      run: |
+        pip install checkov
+        
+    - name: Run Checkov Security Scan
+      run: checkov -d . --framework terraform --output cli --output junitxml --output-file-path ./
+      
+    - name: Upload Checkov Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: checkov-results
+        path: ./
+
+  examples:
+    name: Test Examples
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [
+          'basic-public',
+          'minimal',
+          'complete',
+          'comprehensive',
+          'hybrid-resolver',
+          'private-vpc',
+          'alias-records',
+          'simple-records',
+          'simple-private',
+          'subdomain-delegation',
+          'vpc-integration',
+          'multi-vpc-dns'
+        ]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        
+    - name: Test Example - ${{ matrix.example }}
+      run: |
+        cd examples/${{ matrix.example }}
+        terraform init
+        terraform validate
+        terraform plan -out=tfplan
+      continue-on-error: true
+      
+    - name: Upload Example Plan
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: example-plan-${{ matrix.example }}
+        path: examples/${{ matrix.example }}/tfplan
+
+  documentation:
+    name: Documentation Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check README Links
+      run: |
+        # Check for broken links in README
+        grep -o 'http[s]*://[^)]*' README.md | while read url; do
+          if ! curl -s --head "$url" > /dev/null; then
+            echo "Broken link found: $url"
+            exit 1
+          fi
+        done
+        
+    - name: Validate Terraform.tfvars.example
+      run: |
+        # Check if terraform.tfvars.example is valid
+        terraform init
+        terraform validate -var-file=terraform.tfvars.example
+        
+    - name: Check Required Files
+      run: |
+        # Ensure all required files exist
+        required_files=("main.tf" "variables.tf" "outputs.tf" "README.md" "versions.tf")
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Required file missing: $file"
+            exit 1
+          fi
+        done
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate, test, security, examples, documentation]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Get Version
+      id: get_version
+      run: |
+        # Extract version from git tags or use current date
+        if git describe --tags --abbrev=0 2>/dev/null; then
+          VERSION=$(git describe --tags --abbrev=0)
+        else
+          VERSION="v$(date +%Y.%m.%d)"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: Release ${{ steps.get_version.outputs.version }}
+        body: |
+          ## Changes in this Release
+          
+          ### Features
+          - Comprehensive DNS management with Route 53
+          - Support for public and private hosted zones
+          - Route 53 Resolver integration
+          - Health checks and monitoring
+          
+          ### Improvements
+          - Updated to Terraform 1.13.0
+          - Updated to AWS Provider 6.2.0
+          - Added comprehensive resource map documentation
+          - Enhanced testing coverage
+          
+          ### Documentation
+          - Added resource map to README
+          - Comprehensive examples for all use cases
+          - Security and compliance guidelines
+          
+          ## Usage
+          
+          ```hcl
+          module "dns" {
+            source = "github.com/your-org/tfm-aws-dns"
+            
+            domain_name = "example.com"
+            public_zone_enabled = true
+            private_zone_enabled = true
+            vpc_id = "vpc-12345678"
+          }
+          ```
+        draft: false
+        prerelease: false 
